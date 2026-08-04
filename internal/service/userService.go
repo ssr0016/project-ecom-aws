@@ -3,28 +3,59 @@ package service
 import (
 	"Go-Ecom-Aws/internal/domain"
 	"Go-Ecom-Aws/internal/dto"
+	"Go-Ecom-Aws/internal/repository"
+	"errors"
+	"fmt"
 	"log"
 )
 
-type UserService struct{}
+type UserService struct {
+	Repo repository.UserRepository
+}
 
 func (s UserService) Signup(input dto.UserSignup) (string, error) {
 	log.Println(input)
 	// perform some db operation
+	user, err := s.Repo.CreateUser(domain.User{
+		Email:    input.Email,
+		Password: input.Password,
+		Phone:    input.Phone,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	// generate token
+	log.Println(user)
+
+	userInfo := fmt.Sprintf("%v, %v, %v", user.ID, user.Email, user.UserType)
+
 	// business logic
-	return "this is my token as of now", nil
+	return userInfo, nil
 }
 
 func (s UserService) findUserByEmail(email string) (*domain.User, error) {
 	// perform some db operation
 	// business logic
-	return nil, nil
+	user, err := s.Repo.FindUser(email)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
 }
 
-func (s UserService) Login(input any) (string, error) {
+func (s UserService) Login(email string, password string) (string, error) {
 	// perform some db operation
 	// business logic
-	return "", nil
+	user, err := s.findUserByEmail(email)
+	if err != nil {
+		return "", errors.New("user not found")
+	}
+
+	// compare password and generate token
+
+	return user.Email, nil
 }
 
 func (s UserService) GetVerificationCode(e domain.User) (int, error) {

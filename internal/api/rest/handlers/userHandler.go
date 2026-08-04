@@ -3,6 +3,7 @@ package handlers
 import (
 	"Go-Ecom-Aws/internal/api/rest"
 	"Go-Ecom-Aws/internal/dto"
+	"Go-Ecom-Aws/internal/repository"
 	"Go-Ecom-Aws/internal/service"
 	"net/http"
 
@@ -18,13 +19,15 @@ func SetupUserRoute(rh *rest.RestHandler) {
 	app := rh.App
 
 	// create an instance of user service & inject to handler
-	svc := service.UserService{}
+	svc := service.UserService{
+		Repo: repository.NewUserRepository(rh.DB),
+	}
 
 	handler := UserHandler{svc: svc}
 
 	// Public endpoints
 	app.Post("/register", handler.Register)
-	app.Post("/register", handler.Login)
+	app.Post("/login", handler.Login)
 
 	// Private endpoint
 	app.Get("/verify", handler.GetVerificationCode)
@@ -63,8 +66,25 @@ func (h *UserHandler) Register(ctx *fiber.Ctx) error {
 }
 
 func (h *UserHandler) Login(ctx *fiber.Ctx) error {
+	user := dto.UserLogin{}
+
+	err := ctx.BodyParser(&user)
+	if err != nil {
+		return ctx.Status(http.StatusBadRequest).JSON(&fiber.Map{
+			"message": "please provide valid inputs",
+		})
+	}
+
+	token, err := h.svc.Login(user.Email, user.Password)
+	if err != nil {
+		return ctx.Status(http.StatusUnauthorized).JSON(&fiber.Map{
+			"message": "please provide correct user id and password",
+		})
+	}
+
 	return ctx.Status(http.StatusOK).JSON(&fiber.Map{
 		"message": "user login!",
+		"token":   token,
 	})
 }
 
